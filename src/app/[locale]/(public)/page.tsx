@@ -1,12 +1,22 @@
 import dishApiRequest from '@/apiRequests/dish'
 import { formatCurrency, generateSlugUrl } from '@/lib/utils'
 import { DishListResType } from '@/schemaValidations/dish.schema'
+import { CategoryListResType } from '@/schemaValidations/category.schema'
 import Image from 'next/image'
 import { Link } from '@/navigation'
 import { getTranslations } from 'next-intl/server'
 import { unstable_setRequestLocale } from 'next-intl/server'
 import envConfig, { Locale } from '@/config'
 import { htmlToTextForDescription } from '@/lib/server-utils'
+
+// Function to ensure image URL is absolute
+const getImageUrl = (imagePath: string) => {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  // Add your image base URL here, for example:
+  return `${envConfig.NEXT_PUBLIC_URL}/images/${imagePath}`
+}
 
 export async function generateMetadata({
   params: { locale }
@@ -33,12 +43,14 @@ export default async function Home({
   unstable_setRequestLocale(locale)
   const t = await getTranslations('HomePage')
   let dishList: DishListResType['data'] = []
+  let categories: CategoryListResType['data'] = []
   try {
-    const result = await dishApiRequest.list()
-    const {
-      payload: { data }
-    } = result
-    dishList = data
+    const [dishResult, categoryResult] = await Promise.all([
+      dishApiRequest.list(),
+      dishApiRequest.listByCategory()
+    ])
+    dishList = dishResult.payload.data
+    categories = categoryResult.payload.data
   } catch (error) {
     return <div>Something went wrong</div>
   }
@@ -76,7 +88,7 @@ export default async function Home({
             >
               <div className='flex-shrink-0'>
                 <Image
-                  src={dish.image}
+                  src={getImageUrl(dish.image)}
                   width={150}
                   height={150}
                   quality={80}
@@ -93,6 +105,46 @@ export default async function Home({
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Categories Section */}
+      <section className='space-y-10 py-16 '>
+        <h2 className='text-center text-2xl font-bold'>Menu by Category</h2>
+        {categories.map((category) => (
+          <div key={category.id} className='space-y-6 max-w-7xl mx-auto px-4'>
+            <h3 className='text-xl font-semibold'>{category.name}</h3>
+            <p className='text-gray-600'>{category.description}</p>
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-10'>
+              {category.dishes.map((dish) => (
+                <Link
+                  href={`/dishes/${generateSlugUrl({
+                    name: dish.name,
+                    id: dish.id
+                  })}`}
+                  className='flex gap-4 w'
+                  key={dish.id}
+                >
+                  <div className='flex-shrink-0'>
+                    <Image
+                      src={getImageUrl(dish.image)}
+                      width={150}
+                      height={150}
+                      quality={80}
+                      loading='lazy'
+                      alt={dish.name}
+                      className='object-cover w-[150px] h-[150px] rounded-md'
+                    />
+                  </div>
+                  <div className='space-y-1'>
+                    <h3 className='text-xl font-semibold'>{dish.name}</h3>
+                    <p className=''>{dish.description}</p>
+                    <p className='font-semibold'>{formatCurrency(dish.price)}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
     </div>
   )

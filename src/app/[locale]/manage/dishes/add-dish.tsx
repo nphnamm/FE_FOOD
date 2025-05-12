@@ -75,11 +75,14 @@ export default function AddDish() {
       let body = values
       if (file) {
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', file);
         const uploadImageResult = await uploadMediaMutation.mutateAsync(
           formData
-        )
-        const imageUrl = uploadImageResult.payload.data
+        );
+        console.log("uploadImageResult",uploadImageResult);
+
+        const imageUrl = uploadImageResult.payload.data;
+        console.log("imageUrl",imageUrl);
         body = {
           ...values,
           image: imageUrl
@@ -99,6 +102,7 @@ export default function AddDish() {
       })
     }
   }
+  console.log("previewAvatarFromFile",previewAvatarFromFile)
   return (
     <Dialog
       onOpenChange={(value) => {
@@ -152,7 +156,7 @@ export default function AddDish() {
                           const file = e.target.files?.[0]
                           if (file) {
                             setFile(file)
-                            field.onChange('http://localhost:3000/' + file.name)
+                            field.onChange('http://192.168.1.55:3000/' + file.name)
                           }
                         }}
                         className='hidden'
